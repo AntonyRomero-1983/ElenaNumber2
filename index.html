@@ -74,54 +74,44 @@
           0 0 18px rgba(212,175,55,0.95),
           0 0 36px rgba(212,175,55,0.85),
           0 0 64px rgba(212,175,55,0.65);
-        opacity: 0;
-        animation: radioactivePulse var(--pulse-duration) ease-in-out var(--pulse-delay) infinite;
+        opacity: 0.12;
         will-change: transform, opacity, filter;
       }
 
       .rebis { color: var(--gold-soft); }
       .venus { color: var(--gold); }
 
-      @keyframes radioactivePulse {
-        0%, 14%, 100% {
-          opacity: 0.12;
-          transform: scale(0.72) rotate(0deg);
-          filter: brightness(0.75);
+      .float-symbol.radioactive {
+        animation: radioactiveFlash 0.22s steps(2, end) both;
+      }
+
+      @keyframes radioactiveFlash {
+        0% {
+          opacity: 0.15;
+          filter: brightness(0.8);
+          text-shadow: 0 0 8px rgba(212,175,55,0.8);
         }
-        18% {
+        35% {
           opacity: 1;
-          transform: scale(1.45) rotate(-7deg);
-          filter: brightness(1.8);
+          filter: brightness(2.6);
+          text-shadow:
+            0 0 12px rgba(255,232,125,1),
+            0 0 30px rgba(212,175,55,1),
+            0 0 70px rgba(212,175,55,0.95),
+            0 0 110px rgba(212,175,55,0.75);
         }
-        23% {
-          opacity: 0.42;
-          transform: scale(0.92) rotate(6deg);
+        55% {
+          opacity: 0.35;
           filter: brightness(1.1);
         }
-        27% {
+        75% {
           opacity: 1;
-          transform: scale(1.25) rotate(-3deg);
-          filter: brightness(2.2);
+          filter: brightness(3);
         }
-        34% {
-          opacity: 0.18;
-          transform: scale(0.76) rotate(0deg);
-          filter: brightness(0.8);
-        }
-        58% {
-          opacity: 0.3;
-          transform: scale(0.9) rotate(8deg);
-          filter: brightness(1);
-        }
-        63% {
-          opacity: 0.95;
-          transform: scale(1.35) rotate(-8deg);
-          filter: brightness(1.9);
-        }
-        69% {
-          opacity: 0.1;
-          transform: scale(0.7) rotate(0deg);
-          filter: brightness(0.7);
+        100% {
+          opacity: 0.12;
+          filter: brightness(0.75);
+          text-shadow: 0 0 8px rgba(212,175,55,0.8);
         }
       }
 
@@ -185,35 +175,53 @@
       const allSymbols = [];
       const symbolSize = 40;
 
+      const randomBetween = (min, max) => min + Math.random() * (max - min);
+
       symbolTypes.forEach(({ symbol, className }) => {
         for (let i = 0; i < symbolCount; i++) {
           const symbolEl = document.createElement('div');
           symbolEl.classList.add('float-symbol', className);
           symbolEl.textContent = symbol;
-          symbolEl.style.setProperty('--pulse-duration', `${3.5 + Math.random() * 5}s`);
-          symbolEl.style.setProperty('--pulse-delay', `${-Math.random() * 7}s`);
           symbolField.appendChild(symbolEl);
 
           let x = Math.random() * Math.max(0, window.innerWidth - symbolSize);
           let y = Math.random() * Math.max(0, window.innerHeight - symbolSize);
-          let vx = (Math.random() * 2.4 + 1.8) * (Math.random() > 0.5 ? 1 : -1);
-          let vy = (Math.random() * 2.4 + 1.8) * (Math.random() > 0.5 ? 1 : -1);
+          let vx = randomBetween(3.2, 5.8) * (Math.random() > 0.5 ? 1 : -1);
+          let vy = randomBetween(3.2, 5.8) * (Math.random() > 0.5 ? 1 : -1);
+
+          let flickerTimer;
+          const scheduleFlicker = () => {
+            // Each symbol gets its own irregular, non-consecutive flash schedule.
+            flickerTimer = setTimeout(() => {
+              symbolEl.classList.remove('radioactive');
+              void symbolEl.offsetWidth;
+              symbolEl.classList.add('radioactive');
+              scheduleFlicker();
+            }, randomBetween(900, 6200));
+          };
 
           symbolEl.style.left = `${x}px`;
           symbolEl.style.top = `${y}px`;
+          scheduleFlicker();
 
           const drift = () => {
             x += vx;
             y += vy;
 
             if (x <= 0 || x >= window.innerWidth - symbolSize) {
-              vx *= -1.035;
               x = Math.max(0, Math.min(x, window.innerWidth - symbolSize));
+              vx = -vx * randomBetween(1.18, 1.42);
+              symbolEl.classList.remove('edge-impact');
+              void symbolEl.offsetWidth;
+              symbolEl.classList.add('edge-impact');
             }
 
             if (y <= 0 || y >= window.innerHeight - symbolSize) {
-              vy *= -1.035;
               y = Math.max(0, Math.min(y, window.innerHeight - symbolSize));
+              vy = -vy * randomBetween(1.18, 1.42);
+              symbolEl.classList.remove('edge-impact');
+              void symbolEl.offsetWidth;
+              symbolEl.classList.add('edge-impact');
             }
 
             symbolEl.style.left = `${x}px`;
@@ -222,7 +230,7 @@
           };
 
           requestAnimationFrame(drift);
-          allSymbols.push(symbolEl);
+          allSymbols.push({ element: symbolEl, flickerTimer });
         }
       });
     </script>
